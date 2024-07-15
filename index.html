@@ -4,7 +4,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>ExtBuilder</title>
+  <title>Modify Arrays and Objects</title>
   <style>
     body {
       font-family: Poppins, sans-serif;
@@ -136,13 +136,6 @@
         arguments: {}
       },
       {
-        opcode: 'havesex',
-        text: 'have all the sex',
-        code: 'alert("sorry you are unable to perform this action")',
-        blockType: 'COMMAND',
-        arguments: {}
-      },
-      {
         opcode: 'crazy',
         text: 'delete [A]',
         code: 'delete [A]',
@@ -152,6 +145,29 @@
         }
       }
     ];
+    // get the extension data from the url params
+    const urlParams = new URLSearchParams(window.location.search);
+    const extensionData = urlParams.get('extension');
+
+    // if the extension data is present, parse it and set the extension and blocks
+    if (extensionData) {
+      const data = JSON.parse(atob(extensionData));
+      extension = data.extension;
+      blocks = data.blocks;
+      document.getElementById('extensionName').value = extension.name
+      document.getElementById('extensionId').value = extension.id
+    }
+
+    function updateUrl() {
+      // write the extension data to the url
+      const data = {
+        extension: extension,
+        blocks: blocks
+      };
+      const url = new URL(window.location.href);
+      url.searchParams.set('extension', btoa(JSON.stringify(data)));
+      window.history.pushState({}, '', url);
+    }
 
     function renderBlocks() {
       const blocksContainer = document.getElementById('blocksContainer');
@@ -183,6 +199,7 @@
           </div>`;
         blocksContainer.appendChild(blockDiv);
       });
+      updateUrl()
     }
 
     function renderArguments(arguments, blockIndex) {
@@ -638,10 +655,12 @@ ${vars}
 
     document.getElementById('extensionName').addEventListener('change', (e) => {
       extension.name = e.target.value;
+      updateUrl();
     });
 
     document.getElementById('extensionId').addEventListener('change', (e) => {
       extension.id = e.target.value;
+      updateUrl();
     });
 
     // Initial render
