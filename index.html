@@ -1,0 +1,655 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ExtBuilder</title>
+  <style>
+    body {
+      font-family: Poppins, sans-serif;
+      margin: 20px;
+      background-color: #111;
+      color: #ddd;
+    }
+
+    .container {
+      margin-bottom: 20px;
+      background-color: #222;
+      border-radius: 10px;
+    }
+
+    .container h2,p,div {
+      padding: 10px;
+    }
+
+    input,
+    button {
+      margin: 5px 10px;
+      border-radius: 10px;
+      padding: 10px;
+      font-size: 16px;
+      height: 30px;
+      background-color: #151515;
+      color: #ddd;
+      border: none;
+    }
+
+    button {
+      cursor: pointer;
+      padding: 10px 20px;
+      height: 50px;
+      border: solid 2px #444;
+    }
+
+    input[type="checkbox"] {
+      height: 20px;
+      width: 20px;
+      border-radius: 10px;
+    }
+
+    input[type="text"] {
+      width: calc(100% - 20px);
+      margin: 0px;
+      padding: 5px 10px;
+    }
+
+    input[type="text"]:focus {
+      outline: none;
+    }
+
+    select {
+      width: calc(100% - 0px);
+      height: 40px;
+      border-radius: 10px;
+      background-color: #151515;
+      color: #ddd;
+      border: none;
+      padding: 5px;
+    }
+
+    textarea {
+      width: calc(100% - 20px);
+      height: 400px;
+      border-radius: 10px;
+      background-color: #151515;
+      color: #ddd;
+      border: none;
+      padding: 10px;
+      resize: vertical;
+    }
+
+    .block {
+      margin-bottom: 10px;
+      padding: 10px;
+      border: 3px solid #444;
+      border-radius: 10px;
+    }
+
+    .argument {
+      margin-left: 20px;
+      border-radius: 10px;
+      padding: 10px;
+      border: 3px solid #444;
+      width: calc(100% - 40px);
+      margin: 0px;
+    }
+  </style>
+</head>
+
+<body>
+  <h1>ExtBuilder</h1>
+
+  <div class="container">
+    <h2>Info</h2>
+    <label for="extensionName">Name:</label>
+    <input type="text" id="extensionName" value="sex"><br>
+    <label for="extensionId">ID:</label>
+    <input type="text" id="extensionId" value="sex">
+  </div>
+
+  <div class="container">
+    <h2>Blocks</h2>
+    <div id="blocksContainer">
+      <!-- Blocks will be dynamically added here -->
+    </div>
+    <button onclick="addBlock()">Add Block</button>
+  </div>
+
+  <div class="container">
+    <button onclick="setClipboard()">Generate Extension</button>
+  </div>
+
+  <script>
+    let extension = {
+      name: 'sex',
+      id: 'sex',
+    };
+
+    let blocks = [
+      {
+        opcode: 'sexing',
+        text: 'am i having sex?',
+        code: 'false',
+        blockType: 'BOOLEAN',
+        disableMonitor: true,
+        arguments: {}
+      },
+      {
+        opcode: 'havesex',
+        text: 'have all the sex',
+        code: 'alert("sorry you are unable to perform this action")',
+        blockType: 'COMMAND',
+        arguments: {}
+      },
+      {
+        opcode: 'crazy',
+        text: 'delete [A]',
+        code: 'delete [A]',
+        blockType: 'COMMAND',
+        arguments: {
+          A: { type: 'STRING', defaultValue: 'idk' }
+        }
+      }
+    ];
+
+    function renderBlocks() {
+      const blocksContainer = document.getElementById('blocksContainer');
+      blocksContainer.innerHTML = '';
+      blocks.forEach((block, index) => {
+        const blockDiv = document.createElement('div');
+        blockDiv.className = 'block';
+        blockDiv.innerHTML = `
+          <label>Opcode:</label>
+          <input type="text" value="${block.opcode}" onchange="updateBlock(${index}, 'opcode', this.value)"><br>
+          <label>Text:</label>
+          <input type="text" value='${block.text}' onchange="updateBlock(${index}, 'text', this.value)"><br>
+          <label>Code:</label>
+          <textarea onchange="updateBlock(${index}, 'code', this.value)">${block.code}</textarea><br>
+          <label>Block Type:</label>
+          <select onchange="updateBlock(${index}, 'blockType', this.value)">
+            <option value="COMMAND" ${block.blockType === 'COMMAND' ? 'selected' : ''}>Command</option>
+            <option value="BOOLEAN" ${block.blockType === 'BOOLEAN' ? 'selected' : ''}>Boolean</option>
+            <option value="HAT" ${block.blockType === 'HAT' ? 'selected' : ''}>Hat</option>
+            <option value="REPORTER" ${block.blockType === 'REPORTER' ? 'selected' : ''}>Reporter</option>
+          </select><br>
+          <label>Disable Monitor:</label><input type="checkbox" ${block.disableMonitor ? 'checked' : ''} onchange="updateBlock(${index}, 'disableMonitor', this.checked)"><br>
+          <div class="argumentsContainer">
+            <h3>Arguments</h3>
+            <div id="argumentsContainer${index}">
+              ${renderArguments(block.arguments, index)}
+            </div>
+            <button onclick="addArgument(${index})">Add Argument</button><button onclick="removeBlock(${index})">Remove Block</button>
+          </div>`;
+        blocksContainer.appendChild(blockDiv);
+      });
+    }
+
+    function renderArguments(arguments, blockIndex) {
+      let argumentsHtml = '';
+      for (const arg in arguments) {
+        const argObj = arguments[arg];
+        argumentsHtml += `
+          <div class="argument">
+            <label>Argument Name:</label>
+            <input type="text" value="${arg}" onchange="updateArgumentName(${blockIndex}, '${arg}', this.value)"><br>
+            <label>Type:</label>
+            <select onchange="updateArgument(${blockIndex}, '${arg}', 'type', this.value)">
+              <option value="STRING" ${argObj.type === 'STRING' ? 'selected' : ''}>String</option>
+              <option value="NUMBER" ${argObj.type === 'NUMBER' ? 'selected' : ''}>Number</option>
+              <option value="BOOLEAN" ${argObj.type === 'BOOLEAN' ? 'selected' : ''}>Boolean</option>
+            </select><br>
+            <label>Default Value:</label>
+            <input type="text" value="${argObj.defaultValue}" onchange="updateArgument(${blockIndex}, '${arg}', 'defaultValue', this.value)"><br>
+            <button onclick="removeArgument(${blockIndex}, '${arg}')">Remove Argument</button>
+          </div>`;
+      }
+      return argumentsHtml;
+    }
+
+    function updateBlock(index, key, value) {
+      blocks[index][key] = value;
+      if (key === 'disableMonitor') {
+        blocks[index][key] = value === 'true' || value === true;
+      }
+      renderBlocks();
+    }
+
+    function addBlock() {
+      blocks.push({
+        opcode: '',
+        text: '',
+        code: '',
+        blockType: '',
+        disableMonitor: false,
+        arguments: {}
+      });
+      renderBlocks();
+    }
+
+    function removeBlock(index) {
+      blocks.splice(index, 1);
+      renderBlocks();
+    }
+
+    function addArgument(blockIndex) {
+      const argName = prompt("Enter argument name:");
+      if (argName) {
+        blocks[blockIndex].arguments[argName] = { type: 'STRING', defaultValue: '' };
+        renderBlocks();
+      }
+    }
+
+    function removeArgument(blockIndex, argName) {
+      delete blocks[blockIndex].arguments[argName];
+      renderBlocks();
+    }
+
+    function updateArgument(blockIndex, argName, key, value) {
+      blocks[blockIndex].arguments[argName][key] = value;
+      renderBlocks();
+    }
+
+    function updateArgumentName(blockIndex, oldName, newName) {
+      blocks[blockIndex].arguments[newName] = blocks[blockIndex].arguments[oldName];
+      delete blocks[blockIndex].arguments[oldName];
+      renderBlocks();
+    }
+
+
+    function generateExtension(extension, blocks) {
+
+      // made by mistium lol
+      // everything below is the code that actually compiles your blocks
+      // you should not need to edit it unless you are changing how the blocks are compiled
+      // if you want to add more blocks, just add them above silly :P
+
+      function randomString(length) {
+        let result = '';
+        const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz';
+        for (let i = 0; i < length; i++) {
+          result += characters.charAt(Math.floor(Math.random() * characters.length));
+        }
+        return result;
+      }
+
+      for (let block of blocks) {
+        block.func = "err";
+      }
+
+      for (const block of blocks) {
+        if (block.arguments) {
+          for (const args of Object.keys(block.arguments)) {
+            if (args) {
+              let name = args;
+              block.arguments[args].gen_id = randomString(12);
+              block.arguments[args].defaultValue = block.arguments[args].val;
+              delete block.arguments[args].val;
+              block.code = block.code.replace("[" + name + "]", "${" + block.arguments[args].gen_id + "}")
+            }
+          };
+        }
+      }
+
+      let stringifiedBlocks = JSON.stringify(blocks);
+      stringifiedBlocks = stringifiedBlocks
+        .replace(/"blockType":"([A-Z]+)"/gm, '"blockType": Scratch.BlockType.$1')
+        .replace(/"type":"([A-Z]+)"/gm, '"type": Scratch.ArgumentType.$1');
+
+      let source = `(function (Scratch) {
+  'use strict';
+  // This extension uses mistium's compiled block builder
+  // Please don't remove this, be kind :P
+
+  if (!Scratch.extensions.unsandboxed) {
+    throw new Error("${extension.id} needs to be run unsandboxed.");
+  }
+
+  const vm = Scratch.vm,
+        runtime = vm.runtime;
+
+  class ${extension.id} {
+    getInfo() {
+      return {
+        id: '${extension.id}',
+        name: '${extension.name}',
+        blocks: ${stringifiedBlocks},
+      };
+    }
+    err(args, util, blockJSON) {
+      const err = 'huh, weird error :shrug:';
+      runtime.visualReport(util.thread.isCompiled ? util.thread.peekStack() : util.thread.peekStackFrame().op.id, err);
+      return err;
+    }
+  }
+
+  const sanitize = (string) => {
+    if (typeof string !== 'string') {
+      console.warn(\`sanitize got unexpected type: \${typeof string}\`);
+      string = '' + string;
+    }
+    return JSON.stringify(string).slice(1, -1);
+  };
+
+  const mistutil_iwnafhwtb = vm.exports.i_will_not_ask_for_help_when_these_break();
+  const mist_JSG = mistutil_iwnafhwtb.JSGenerator;
+  const mist_STG = mistutil_iwnafhwtb.ScriptTreeGenerator;
+  const mist_JSGP = mist_JSG.prototype;
+  const mist_STGP = mist_STG.prototype;
+
+  const TYPE_NUMBER = 1;
+  const TYPE_STRING = 2;
+  const TYPE_BOOLEAN = 3;
+  const TYPE_UNKNOWN = 4;
+  const TYPE_NUMBER_NAN = 5;
+
+  // prettier-ignore
+  class TypedInput {
+    constructor(t, s) {
+      if ("number" != typeof s) throw Error("type is invalid");
+      this.source = t, this.type = s
+    }
+    asNumber() {
+      return this.type === TYPE_NUMBER ? this.source : this.type === TYPE_NUMBER_NAN ? \`(\${this.source} || 0)\` : \`(+\${this.source} || 0)\`
+    }
+    asNumberOrNaN() {
+      return this.type === TYPE_NUMBER || this.type === TYPE_NUMBER_NAN ? this.source : \`(+\${this.source})\`
+    }
+    asString() {
+      return this.type === TYPE_STRING ? this.source : \`("" + \${this.source})\`
+    }
+    asBoolean() {
+      return this.type === TYPE_BOOLEAN ? this.source : \`toBoolean(\${this.source})\`
+    }
+    asColor() {
+      return this.asUnknown()
+    }
+    asUnknown() {
+      return this.source
+    }
+    asSafe() {
+      return this.asUnknown()
+    }
+    isAlwaysNumber() {
+      return this.type === TYPE_NUMBER
+    }
+    isAlwaysNumberOrNaN() {
+      return this.type === TYPE_NUMBER || this.type === TYPE_NUMBER_NAN
+    }
+    isNeverNumber() {
+      return !1
+    }
+  }
+
+  // prettier-ignore
+  class ConstantInput {
+    constructor(t, s) {
+      this.constantValue = t, this.safe = s
+    }
+    asNumber() {
+      let t = +this.constantValue;
+      return t ? t.toString() : Object.is(t, -0) ? "-0" : "0"
+    }
+    asNumberOrNaN() {
+      return this.asNumber()
+    }
+    asString() {
+      return \`"\${sanitize("" + this.constantValue)}"\`
+    }
+    asBoolean() {
+      return Cast.toBoolean(this.constantValue).toString()
+    }
+    asColor() {
+      if (/^#[0-9a-f]{6, 8}$/i.test(this.constantValue)) {
+        let t = this.constantValue.substr(1);
+        return Number.parseInt(t, 16).toString()
+      }
+      return this.asUnknown()
+    }
+    asUnknown() {
+      if ("number" == typeof this.constantValue) return this.constantValue;
+      let t = +this.constantValue;
+      return t.toString() === this.constantValue ? this.constantValue : this.asString()
+    }
+    asSafe() {
+      return this.safe ? this.asUnknown() : this.asString()
+    }
+    isAlwaysNumber() {
+      let t = +this.constantValue;
+      return !Number.isNaN(t) && (0 !== t || "" !== this.constantValue.toString().trim())
+    }
+    isAlwaysNumberOrNaN() {
+      return this.isAlwaysNumber()
+    }
+    isNeverNumber() {
+      return Number.isNaN(+this.constantValue)
+    }
+  }
+
+  // prettier-ignore
+  class VariableInput {
+    constructor(t) {
+      this.source = t, this.type = TYPE_UNKNOWN, this._value = null
+    }
+    setInput(t) {
+      if (t instanceof VariableInput) {
+        if (t._value) t = t._value;
+        else {
+          this.type = TYPE_UNKNOWN, this._value = null;
+          return
+        }
+      }
+      this._value = t, t instanceof TypedInput ? this.type = t.type : this.type = TYPE_UNKNOWN
+    }
+    asNumber() {
+      return this.type === TYPE_NUMBER ? this.source : this.type === TYPE_NUMBER_NAN ? \`(\${this.source} || 0)\` : \`(+\${this.source} || 0)\`
+    }
+    asNumberOrNaN() {
+      return this.type === TYPE_NUMBER || this.type === TYPE_NUMBER_NAN ? this.source : \`(+\${this.source})\`
+    }
+    asString() {
+      return this.type === TYPE_STRING ? this.source : \`("" + \${this.source})\`
+    }
+    asBoolean() {
+      return this.type === TYPE_BOOLEAN ? this.source : \`toBoolean(\${this.source})\`
+    }
+    asColor() {
+      return this.asUnknown()
+    }
+    asUnknown() {
+      return this.source
+    }
+    asSafe() {
+      return this.asUnknown()
+    }
+    isAlwaysNumber() {
+      return !!this._value && this._value.isAlwaysNumber()
+    }
+    isAlwaysNumberOrNaN() {
+      return !!this._value && this._value.isAlwaysNumberOrNaN()
+    }
+    isNeverNumber() {
+      return !!this._value && this._value.isNeverNumber()
+    }
+  }
+
+  const PATCHES_ID = '${extension.id}_patches';
+  const cst_patch = (obj, functions) => {
+    if (obj[PATCHES_ID]) return;
+    obj[PATCHES_ID] = {};
+    for (const name in functions) {
+      const original = obj[name];
+      obj[PATCHES_ID][name] = obj[name];
+      if (original) {
+        obj[name] = function (...args) {
+          const callOriginal = (...args) => original.call(this, ...args);
+          return functions[name].call(this, callOriginal, ...args);
+        };
+      } else {
+        obj[name] = function (...args) {
+          return functions[name].call(this, () => { }, ...args);
+        };
+      }
+    }
+  };
+
+  function caseSanitize(case_) {
+    if (typeof case_ === 'undefined') return 'undefined'; // Sanitize undefined
+    if (typeof case_ === 'string') return \`"\${sanitize(case_)}"\`;
+    if (typeof case_ === 'number') return String(case_);
+    console.warn(\`sanitization failed on case of type: \${typeof case_}, casting to string\`);
+    return String(case_);
+  }
+
+  function descendTillSource(input, san) {
+    let des = this.descendInput(input),
+        src = false;
+    if (input.kind === 'constant' && input?.value) return san(input.value);
+    if (des.constantValue?.value) return san(des.constantValue.value);
+    if (des?.source) return des.source;
+    des = this.descendInput(des.constantValue);
+    if (des.constantValue?.value) return san(des.constantValue.value);
+    src = true;
+    if (des?.source ?? des?.constantValue?.source) return des?.source ?? des?.constantValue?.source;
+    throw new Error('Unable to descend input');
+  }
+
+  cst_patch(mist_JSGP, {
+    descendStackedBlock(originalFn, node) {
+      const block = node.block;
+      switch (node.kind) {
+        ${blocks.map((block_data) => {
+        let vars = '';
+        if (block_data.arguments) {
+          for (const arg of Object.keys(block_data.arguments)) {
+            vars += `\nconst ${block_data.arguments[arg].gen_id} = descendTillSource.call(this, node.${arg}, caseSanitize);`;
+          }
+        }
+        return `case '${extension.id + "." + block_data.opcode}': ${vars}
+this.source += \`\\nvm.runtime.visualReport("\${block.id}", ${block_data.code});\\n\`;
+return;`;
+      }).join('\n')}
+        default:
+          return originalFn.call(this, node);
+      }
+    },
+
+    descendInput(originalFn, node) {
+      console.log(node)
+      switch (node.kind) {
+        ${blocks.map((block_data) => {
+        let vars = '';
+        if (block_data.arguments) {
+          for (const arg of Object.keys(block_data.arguments)) {
+            vars += `\nconst ${block_data.arguments[arg].gen_id} = descendTillSource.call(this, node.${arg}, caseSanitize);`;
+          }
+        }
+        return `case '${extension.id + "." + block_data.opcode}': ${vars}
+return new TypedInput(\`${block_data.code}\`, TYPE_${block_data.blockType.split('.')[2]});`;
+      }).join('\n')}
+        default:
+          return originalFn(node);
+      }
+    },
+  });
+
+  cst_patch(mist_STGP, {
+    descendStackedBlock(originalFn, block) {
+      switch (block.opcode) {
+        ${blocks.map((block_data) => {
+        let vars = '';
+        if (block_data.arguments) {
+          for (const arg of Object.keys(block_data.arguments)) {
+            vars += `${arg}: this.descendInputOfBlock(block, '${arg}'),\n`;
+          }
+        }
+        return `case '${extension.id + "_" + block_data.opcode}':
+return {
+block,
+kind: '${extension.id + "." + block_data.opcode}',
+${vars}
+};`;
+      }).join('\n')}
+        default:
+          return originalFn(block);
+      }
+    },
+
+    descendInput(originalFn, block) {
+      switch (block.opcode) {
+        ${blocks.map((block_data) => {
+        let vars = '';
+        if (block_data.arguments) {
+          for (const arg of Object.keys(block_data.arguments)) {
+            vars += `${arg}: this.descendInputOfBlock(block, '${arg}'),\n`;
+          }
+        }
+        return `case '${extension.id + "_" + block_data.opcode}':
+return {
+block,
+kind: '${extension.id + "." + block_data.opcode}',
+${vars}
+};`;
+      }).join('\n')}
+        default:
+          return originalFn(block);
+      }
+    },
+  });
+
+  Scratch.extensions.register(new ${extension.id}());
+})(Scratch);`;
+
+      return source.toString();
+    }
+
+    async function setClipboard() {
+      let text = generateExtension(extension, blocks)
+      const type = "text/plain";
+      const blob = new Blob([text], { type });
+      const data = [new ClipboardItem({ [type]: blob })];
+      alert('Extension code copied to clipboard');
+      await navigator.clipboard.write(data);
+    }
+
+    function updateBlock(index, key, value) {
+      blocks[index][key] = value;
+      if (key === 'disableMonitor') {
+        blocks[index][key] = value === 'true' || value === true;
+      }
+      renderBlocks();
+    }
+
+    function addBlock() {
+      blocks.push({
+        opcode: '',
+        text: '',
+        code: '',
+        blockType: '',
+        disableMonitor: false,
+      });
+      renderBlocks();
+    }
+
+    function removeBlock(index) {
+      blocks.splice(index, 1);
+      renderBlocks();
+    }
+
+    document.getElementById('extensionName').addEventListener('change', (e) => {
+      extension.name = e.target.value;
+    });
+
+    document.getElementById('extensionId').addEventListener('change', (e) => {
+      extension.id = e.target.value;
+    });
+
+    // Initial render
+    renderBlocks();
+
+    // write extension data to a blob and open new tab
+  </script>
+  <script src="generator.js"></script>
+</body>
+
+</html>
